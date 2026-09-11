@@ -1,0 +1,125 @@
+body {
+    margin: 0;
+    background-color: #0d0202;
+    color: #ffffff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.game-container {
+    width: 900px;
+    height: 600px;
+    border: 2px solid #8b0000;
+    box-shadow: 0 0 20px #ff000055;
+    background: radial-gradient(circle, #2a0808 0%, #050000 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.hud-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.hp-bars {
+    display: flex;
+    gap: 20px;
+}
+
+.bar-outer {
+    width: 150px;
+    height: 15px;
+    background: #333;
+    border: 1px solid #777;
+    border-radius: 3px;
+}
+
+.bar-inner.hero { background: #0088ff; height: 100%; transition: width 0.3s; }
+.bar-inner.devil { background: #ff0000; height: 100%; transition: width 0.3s; }
+
+.battle-stage {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 250px;
+    padding: 0 50px;
+}
+
+.quiz-panel {
+    background: rgba(20, 0, 0, 0.85);
+    border: 1px solid #ff3333;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+#answer-input {
+    padding: 10px;
+    width: 60%;
+    background: #000;
+    border: 1px solid #ff3333;
+    color: #fff;
+    margin-right: 10px;
+}
+
+#attack-btn {
+    padding: 10px 20px;
+    background: #8b0000;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
+#attack-btn:hover { background: #ff0000; }
+
+/* Damage Screen Shake Animation */
+.shake {
+    animation: shakeEffect 0.5s ease-in-out;
+}
+
+@keyframes shakeEffect {
+    0% { transform: translate(1px, 1px) rotate(0deg); }
+    20% { transform: translate(-3px, 0px) rotate(-1deg); }
+    40% { transform: translate(3px, 2px) rotate(1deg); }
+    60% { transform: translate(-3px, 1px) rotate(0deg); }
+    80% { transform: translate(3px, 1px) rotate(1deg); }
+    100% { transform: translate(1px, -2px) rotate(0deg); }
+}
+
+#leaderboard-btn {
+    background: #ffcc00;
+    color: #000;
+    font-weight: bold;
+    border: none;
+    padding: 8px 15px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.modal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 100;
+}
+
+.modal-content {
+    background: #1a0000;
+    border: 2px solid #ffcc00;
+    padding: 30px; width: 350px;
+    text-align: center; color: #fff;
+    box-shadow: 0 0 15px #ffcc0088;
+}
+
+.close-btn {
+    float: right; font-size: 24px; cursor: pointer; color: #ff3333;
+}

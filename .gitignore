@@ -1,0 +1,27 @@
+# Sensitive Local Configs
+.env
+db.properties
+config.json
+
+# IDE and Project Settings
+.vscode/
+.idea/
+*.iws
+*.iml
+*.ipr
+.classpath
+.project
+.settings/
+
+# Java Compiled Classes & Libraries
+*.class
+bin/
+build/
+target/
+*.jar
+*.war
+
+# Tomcat & Local Logs
+*.log
+work/
+temp/

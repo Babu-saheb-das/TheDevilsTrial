@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Devil's Trial</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Google Identity Services SDK -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Top HUD Header -->
+        <div class="hud-header">
+            <div class="user-profile">
+                <img id="user-pic" src="" alt="Profile" style="display:none;">
+                <span id="user-name">Guest Player</span>
+            </div>
+            
+            <div class="hp-bars">
+                <div class="hp-box">
+                    <label>HERO HP</label>
+                    <div class="bar-outer"><div id="hero-hp" class="bar-inner hero" style="width: 100%;"></div></div>
+                </div>
+                <div class="hp-box">
+                    <label>DEVIL HP</label>
+                    <div class="bar-outer"><div id="devil-hp" class="bar-inner devil" style="width: 100%;"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Battle Stage -->
+        <div class="battle-stage">
+            <div class="character hero-container">
+                <div class="hero-placeholder">⚔️ HERO</div>
+            </div>
+            <div class="character devil-container">
+                <div class="devil-placeholder">😈 DEVIL</div>
+            </div>
+        </div>
+
+        <!-- Bottom Quiz Terminal Overlay -->
+        <div class="quiz-panel">
+            <div id="auth-section">
+                <h3>Prove Your Worth To Enter The Trial</h3>
+              
+                <div id="g_id_onload"
+                    data-client_id="253613009870-gknpla6p4p0kq46nlepqi17ilg84487p.apps.googleusercontent.com"
+                    data-callback="handleCredentialResponse">
+                </div>
+                <div class="g_id_signin" data-type="standard"></div>
+            </div>
+
+            <div id="game-section" style="display: none;">
+                <div id="question-box">Question loads here...</div>
+                <input type="text" id="answer-input" placeholder="Type your answer here..." autocomplete="off">
+                <button id="attack-btn" onclick="submitAnswer()">ATTACK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaderboard Trigger Button -->
+<button id="leaderboard-btn" onclick="toggleLeaderboard()">🏆 LEADERBOARD</button>
+
+<!-- Modal Overlay -->
+<div id="leaderboard-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <span class="close-btn" onclick="toggleLeaderboard()">&times;</span>
+        <h2>TOP DEVIL SLAYERS</h2>
+        <ol id="leaderboard-list"></ol>
+    </div>
+</div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
