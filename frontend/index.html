@@ -1,78 +1,214 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Devil's Trial</title>
-    <link rel="stylesheet" href="css/style.css">
-    <!-- Google Identity Services SDK -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0508">
+  <meta name="description" content="The Devil's Trial — a dark fantasy coding battle. Predict the output, survive the chambers, and slay the Demon Lord.">
+  <title>The Devil's Trial</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="assets/logo.png" type="image/png">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
-<body>
-    <div class="game-container">
-        <!-- Top HUD Header -->
-        <div class="hud-header">
-            <div class="user-profile">
-                <img id="user-pic" src="" alt="Profile" style="display:none;">
-                <span id="user-name">Guest Player</span>
-            </div>
-            
-            <div class="hp-bars">
-                <div class="hp-box">
-                    <label>HERO HP</label>
-                    <div class="bar-outer"><div id="hero-hp" class="bar-inner hero" style="width: 100%;"></div></div>
-                </div>
-                <div class="hp-box">
-                    <label>DEVIL HP</label>
-                    <div class="bar-outer"><div id="devil-hp" class="bar-inner devil" style="width: 100%;"></div></div>
-                </div>
-            </div>
+<body class="realm-body">
+  <div class="ember-veil" aria-hidden="true"></div>
+  <div class="rune-mist" aria-hidden="true"></div>
+
+  <header class="trial-header" role="banner">
+    <nav class="trial-navbar" aria-label="Realm navigation">
+      <div class="navbar-brand">
+        <img src="assets/logo.png" alt="The Devil's Trial crest" class="game-logo rune-glow" width="56" height="56">
+        <h1 class="game-title blood-title">The Devil's Trial</h1>
+      </div>
+
+      <div class="navbar-auth">
+        <div
+          id="g_id_onload"
+          class="gsi-onload"
+          data-client_id="253613009870-gknpla6p4p0kq46nlepqi17ilg84487p.apps.googleusercontent.com"
+          data-context="signin"
+          data-ux_mode="popup"
+          data-auto_prompt="false"
+          data-callback="handleGoogleCredential"
+          data-nonce="">
+        </div>
+        <div
+          id="g_id_signin"
+          class="g_id_signin google-signin-widget"
+          data-type="standard"
+          data-shape="pill"
+          data-theme="filled_black"
+          data-text="signin_with"
+          data-size="medium"
+          data-logo_alignment="left">
         </div>
 
-        <!-- Middle Battle Stage -->
-        <div class="battle-stage">
-            <div class="character hero-container">
-                <div class="hero-placeholder">⚔️ HERO</div>
+        <aside id="user-profile-hud" class="user-profile-hud" hidden aria-label="Summoner profile">
+          <img id="user-avatar" class="user-avatar ember-ring" src="" alt="Signed-in summoner">
+          <div class="user-profile-meta">
+            <span class="user-role-label">Summoner</span>
+            <span id="user-name" class="user-name">—</span>
+          </div>
+        </aside>
+      </div>
+    </nav>
+  </header>
+
+  <main id="app" class="trial-stage">
+    <section class="arena-hud" aria-label="Top arena heads-up display">
+      <article class="combatant-card combatant-hero" id="hero-card">
+        <figure class="portrait-frame hero-frame">
+          <img src="assets/hero.jfif" alt="Knight Coder portrait" class="portrait-image hero-portrait pulse-glow-cyan" width="96" height="96">
+          <figcaption class="combatant-name hero-name">Knight Coder</figcaption>
+        </figure>
+        <div class="vital-block">
+          <label class="vital-label" for="hero-hp-bar">Hero HP: <span id="hero-hp-text">100 / 100</span></label>
+          <div class="hp-track hp-track-hero">
+            <div
+              id="hero-hp-bar"
+              class="hp-bar hp-bar-hero glow-bar-cyan"
+              role="progressbar"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="100"
+              aria-label="Hero HP: 100 / 100"
+              style="width: 100%;">
             </div>
-            <div class="character devil-container">
-                <div class="devil-placeholder">😈 DEVIL</div>
-            </div>
+          </div>
         </div>
+      </article>
 
-        <!-- Bottom Quiz Terminal Overlay -->
-        <div class="quiz-panel">
-            <div id="auth-section">
-                <h3>Prove Your Worth To Enter The Trial</h3>
-              
-                <div id="g_id_onload"
-                    data-client_id="253613009870-gknpla6p4p0kq46nlepqi17ilg84487p.apps.googleusercontent.com"
-                    data-callback="handleCredentialResponse">
-                </div>
-                <div class="g_id_signin" data-type="standard"></div>
-            </div>
-
-            <div id="game-section" style="display: none;">
-                <div id="question-box">Question loads here...</div>
-                <input type="text" id="answer-input" placeholder="Type your answer here..." autocomplete="off">
-                <button id="attack-btn" onclick="submitAnswer()">ATTACK</button>
-            </div>
+      <div class="arena-center" aria-label="Chamber and countdown">
+        <p id="chamber-indicator" class="chamber-indicator rune-text" aria-live="polite">Chamber 1 / 5</p>
+        <div class="countdown-sigil" aria-label="Thirty second countdown timer">
+          <svg class="timer-ring" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="timer-ring-track" cx="60" cy="60" r="52"></circle>
+            <circle id="timer-ring-progress" class="timer-ring-progress glow-stroke-crimson" cx="60" cy="60" r="52"></circle>
+          </svg>
+          <time id="countdown-timer" class="countdown-timer pulse-glow-crimson" datetime="PT30S" aria-live="polite">30</time>
         </div>
-    </div>
+        <p class="timer-caption">Seconds remaining</p>
+      </div>
 
-    <!-- Leaderboard Trigger Button -->
-<button id="leaderboard-btn" onclick="toggleLeaderboard()">🏆 LEADERBOARD</button>
+      <article class="combatant-card combatant-devil" id="devil-card">
+        <figure class="portrait-frame devil-frame">
+          <img src="assets/devil.png" alt="Demon Lord portrait" class="portrait-image devil-portrait pulse-glow-crimson" width="96" height="96">
+          <figcaption class="combatant-name devil-name">Demon Lord</figcaption>
+        </figure>
+        <div class="vital-block">
+          <label class="vital-label" for="devil-hp-bar">Devil HP: <span id="devil-hp-text">100 / 100</span></label>
+          <div class="hp-track hp-track-devil">
+            <div
+              id="devil-hp-bar"
+              class="hp-bar hp-bar-devil glow-bar-crimson"
+              role="progressbar"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="100"
+              aria-label="Devil HP: 100 / 100"
+              style="width: 100%;">
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
 
-<!-- Modal Overlay -->
-<div id="leaderboard-modal" class="modal" style="display:none;">
-    <div class="modal-content">
-        <span class="close-btn" onclick="toggleLeaderboard()">&times;</span>
-        <h2>TOP DEVIL SLAYERS</h2>
-        <ol id="leaderboard-list"></ol>
-    </div>
-</div>
+    <section class="battlefield-stage" aria-label="Center battle field">
+      <div class="stage-floor hex-runes">
+        <canvas id="battle-canvas" class="battle-canvas" width="960" height="360" aria-hidden="true"></canvas>
+        <div id="slash-fx" class="slash-fx-container" hidden>
+          <img src="assets/slash.png" alt="" class="slash-fx-image slash-strike" width="320" height="180">
+        </div>
+        <div id="impact-burst" class="impact-burst" aria-hidden="true"></div>
+      </div>
+    </section>
 
-    <script src="js/auth.js"></script>
-    <script src="js/audio.js"></script>
-    <script src="js/app.js"></script>
+    <section class="trial-terminal" aria-labelledby="terminal-heading">
+      <header class="terminal-chrome">
+        <h2 id="terminal-heading" class="terminal-title">Arcane Terminal</h2>
+        <p id="puzzle-prompt" class="puzzle-prompt">Predict the output of the forbidden snippet.</p>
+      </header>
+
+      <article class="code-sigil-panel">
+        <pre id="puzzle-snippet" class="code-panel" tabindex="0"><code id="puzzle-code" class="puzzle-code">// The chamber awaits your first incantation...
+function trial() {
+  let souls = 3;
+  for (let i = 0; i &lt; 3; i++) {
+    souls += i;
+  }
+  return souls;
+}
+console.log(trial());</code></pre>
+      </article>
+
+      <form id="spell-form" class="spell-form" autocomplete="off">
+        <label class="sr-only" for="answer-input">Predicted output</label>
+        <input
+          type="text"
+          id="answer-input"
+          name="answer"
+          class="answer-input rune-input"
+          placeholder="Type the predicted output…"
+          spellcheck="false"
+          required
+          aria-describedby="puzzle-prompt">
+        <button type="submit" id="cast-spell-btn" class="cast-spell-btn glow-btn-crimson">
+          Cast Spell
+        </button>
+      </form>
+    </section>
+  </main>
+
+  <dialog id="fate-modal" class="fate-modal" aria-labelledby="fate-title" hidden>
+    <div class="fate-veil"></div>
+    <article id="victory-panel" class="fate-panel victory-panel" hidden>
+      <h2 id="fate-title" class="fate-title victory-title">Victory — Realm Cleared</h2>
+      <p class="fate-flavor">The Demon Lord falls. The chambers fall silent.</p>
+      <dl class="fate-stats">
+        <div class="stat-row">
+          <dt>Clear Time</dt>
+          <dd id="stat-clear-time">--:--</dd>
+        </div>
+        <div class="stat-row">
+          <dt>Chambers Cleared</dt>
+          <dd id="stat-chambers">5 / 5</dd>
+        </div>
+        <div class="stat-row">
+          <dt>Hero HP Remaining</dt>
+          <dd id="stat-hero-hp">—</dd>
+        </div>
+        <div class="stat-row">
+          <dt>Rank</dt>
+          <dd id="stat-rank">—</dd>
+        </div>
+      </dl>
+      <button type="button" id="victory-retry-btn" class="modal-btn glow-btn-gold retry-btn">Retry</button>
+    </article>
+
+    <article id="defeat-panel" class="fate-panel defeat-panel" hidden>
+      <h2 class="fate-title defeat-title">Defeat — Trial Failed</h2>
+      <p class="fate-flavor">The Demon Lord still holds the realm. Rise again, Knight Coder.</p>
+      <dl class="fate-stats">
+        <div class="stat-row">
+          <dt>Time Survived</dt>
+          <dd id="stat-survive-time">--:--</dd>
+        </div>
+        <div class="stat-row">
+          <dt>Chamber Reached</dt>
+          <dd id="stat-chamber-reached">1 / 5</dd>
+        </div>
+        <div class="stat-row">
+          <dt>Devil HP Remaining</dt>
+          <dd id="stat-devil-hp">—</dd>
+        </div>
+      </dl>
+      <button type="button" id="defeat-retry-btn" class="modal-btn glow-btn-crimson retry-btn">Retry</button>
+    </article>
+  </dialog>
+
+  <script src="js/audio.js"></script>
+  <script src="js/canvas.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
