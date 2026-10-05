@@ -696,7 +696,9 @@ body.is-slashing .slash-strike {
 
 body.is-shaking,
 .trial-stage.is-shaking,
-.arena-hud.is-shaking {
+.arena-hud.is-shaking,
+.combatant-card.is-shaking,
+.hp-bar.is-shaking {
   animation: damageShake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
