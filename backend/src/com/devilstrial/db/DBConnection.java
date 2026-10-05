@@ -3,34 +3,120 @@ package com.devilstrial.db;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
-public class DBConnection {
-   
-    // Fallback values mein generic placeholders use karein, real password nahi!
-    private static final String URL = System.getenv("DB_URL") != null 
-            ? System.getenv("DB_URL") 
-            : "jdbc:mysql://localhost:3306/devilstrial_db";
-            
-    private static final String USER = System.getenv("DB_USER") != null 
-            ? System.getenv("DB_USER") 
-            : "root"; 
-            
-    private static final String PASSWORD = System.getenv("DB_PASS") != null 
-            ? System.getenv("DB_PASS") 
-            : ""; // <-- Empty rakhein ya local environment variable set karein
+/**
+ * Pure Java SE JDBC access for The Devil's Trial.
+ * Initialization-on-demand holder singleton plus a small connection pool
+ * so servlets can borrow/return connections without Spring or a third-party pool.
+ *
+ * Edit the constants below to match the local MySQL install.
+ */
+public final class DBConnection {
 
-    public static Connection getConnection() {
-        Connection connection = null;
+    public static final String DB_HOST = "localhost";
+    public static final int DB_PORT = 3306;
+    public static final String DB_NAME = "devils_trial";
+    public static final String DB_USER = "root";
+    public static final String DB_PASSWORD = "password";
+
+    public static final String JDBC_URL =
+            "jdbc:mysql://" + DB_HOST + ":" + DB_PORT + "/" + DB_NAME
+                    + "?useSSL=false"
+                    + "&allowPublicKeyRetrieval=true"
+                    + "&serverTimezone=UTC"
+                    + "&characterEncoding=UTF-8";
+
+    private static final String JDBC_DRIVER = "com.mysql.cj.jdbc.Driver";
+    private static final int POOL_SIZE = 8;
+    private static final long BORROW_TIMEOUT_SECONDS = 8L;
+
+    private final BlockingQueue<Connection> pool;
+
+    private static final class Holder {
+        private static final DBConnection INSTANCE = new DBConnection();
+    }
+
+    private DBConnection() {
         try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+            Class.forName(JDBC_DRIVER);
         } catch (ClassNotFoundException e) {
-            System.err.println("MySQL Driver class nahi mili!");
-            e.printStackTrace();
-        } catch (SQLException e) {
-            System.err.println("Database Connection Fail ho gaya!");
-            e.printStackTrace();
+            throw new IllegalStateException("MySQL JDBC driver not found on the classpath: " + JDBC_DRIVER, e);
         }
-        return connection;
+
+        pool = new ArrayBlockingQueue<>(POOL_SIZE);
+        for (int i = 0; i < POOL_SIZE; i++) {
+            pool.offer(openPhysicalConnection());
+        }
+    }
+
+    public static DBConnection getInstance() {
+        return Holder.INSTANCE;
+    }
+
+    /**
+     * Borrow a pooled connection. Call {@link #releaseConnection(Connection)} when finished.
+     */
+    public static Connection getConnection() throws SQLException {
+        return getInstance().borrowConnection();
+    }
+
+    public static void releaseConnection(Connection connection) {
+        getInstance().returnConnection(connection);
+    }
+
+    private Connection borrowConnection() throws SQLException {
+        try {
+            Connection connection = pool.poll(BORROW_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            if (connection == null) {
+                throw new SQLException("Timed out waiting for a free JDBC connection to " + DB_NAME);
+            }
+            if (!isHealthy(connection)) {
+                silentlyClose(connection);
+                connection = openPhysicalConnection();
+            }
+            return connection;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new SQLException("Interrupted while borrowing a JDBC connection", e);
+        }
+    }
+
+    private void returnConnection(Connection connection) {
+        if (connection == null) {
+            return;
+        }
+        if (!isHealthy(connection) || !pool.offer(connection)) {
+            silentlyClose(connection);
+        }
+    }
+
+    private Connection openPhysicalConnection() {
+        try {
+            return DriverManager.getConnection(JDBC_URL, DB_USER, DB_PASSWORD);
+        } catch (SQLException e) {
+            throw new IllegalStateException(
+                    "Failed to connect to MySQL database '" + DB_NAME + "' at " + JDBC_URL, e);
+        }
+    }
+
+    private static boolean isHealthy(Connection connection) {
+        try {
+            return connection != null && !connection.isClosed() && connection.isValid(2);
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    private static void silentlyClose(Connection connection) {
+        try {
+            if (connection != null && !connection.isClosed()) {
+                connection.close();
+            }
+        } catch (SQLException ignored) {
+            // Pool replacement already handles a dead connection.
+        }
     }
 }
