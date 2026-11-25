@@ -11,6 +11,7 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="realm-body">
+  <canvas id="ember-canvas" class="ember-canvas" aria-hidden="true"></canvas>
   <div class="ember-veil" aria-hidden="true"></div>
   <div class="rune-mist" aria-hidden="true"></div>
 
@@ -50,6 +51,7 @@
             <span id="user-name" class="user-name">—</span>
           </div>
         </aside>
+        <button type="button" id="leaderboard-btn" class="leaderboard-btn glow-btn-gold">Souls</button>
       </div>
     </nav>
   </header>
@@ -58,7 +60,7 @@
     <section class="arena-hud" aria-label="Top arena heads-up display">
       <article class="combatant-card combatant-hero" id="hero-card">
         <figure class="portrait-frame hero-frame">
-          <img src="assets/hero.png" alt="Knight Coder portrait" class="portrait-image hero-portrait pulse-glow-cyan" width="96" height="96">
+          <img src="assets/hero.jfif" alt="Knight Coder portrait" class="portrait-image hero-portrait pulse-glow-cyan" width="96" height="96">
           <figcaption class="combatant-name hero-name">Knight Coder</figcaption>
         </figure>
         <div class="vital-block">
@@ -203,6 +205,15 @@ console.log(trial());</code></pre>
         </div>
       </dl>
       <button type="button" id="defeat-retry-btn" class="modal-btn glow-btn-crimson retry-btn">Retry</button>
+    </article>
+  </dialog>
+
+  <dialog id="leaderboard-modal" class="fate-modal leaderboard-modal" aria-labelledby="leaderboard-title" hidden>
+    <article class="fate-panel leaderboard-panel">
+      <h2 id="leaderboard-title" class="fate-title victory-title">Top 5 Souls</h2>
+      <p class="fate-flavor">Victory score is remaining Hero HP × 10.</p>
+      <ol id="leaderboard-list" class="leaderboard-list"></ol>
+      <button type="button" id="leaderboard-close-btn" class="modal-btn glow-btn-crimson retry-btn">Close</button>
     </article>
   </dialog>
 

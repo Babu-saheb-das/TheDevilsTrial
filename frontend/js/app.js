@@ -8,14 +8,13 @@
   var TOTAL_CHAMBERS = 5;
   var TIMER_RING_RADIUS = 52;
   var TIMER_CIRCUMFERENCE = 2 * Math.PI * TIMER_RING_RADIUS;
-  var API_GAME = "/api/game";
 
   var LOCAL_CHAMBERS = [
     {
       chamber: 1,
       title: "Chamber I — Summoning Loop",
-      description: "Predict the printed integer. A simple accumulating for-loop.",
-      puzzle:
+      description: "Predict the printed integer. Type only the output.",
+      puzzle_code:
         "int n = 0;\nfor (int i = 1; i <= 4; i++) {\n    n += i;\n}\nSystem.out.println(n);",
       expected: "10"
     },
@@ -23,31 +22,29 @@
       chamber: 2,
       title: "Chamber II — Rune Slice",
       description: "Predict the exact string printed after substring and char concatenation.",
-      puzzle:
-        'String s = "trial";\nSystem.out.println(s.substring(1, 4) + s.charAt(0));',
+      puzzle_code: 'String s = "trial";\nSystem.out.println(s.substring(1, 4) + s.charAt(0));',
       expected: "riat"
     },
     {
       chamber: 3,
       title: "Chamber III — Trailing Curse",
       description: "Debug the empty-statement trap. What integer is printed?",
-      puzzle: "int x = 0;\nfor (int i = 0; i < 5; i++);\n    x++;\nSystem.out.println(x);",
+      puzzle_code: "int x = 0;\nfor (int i = 0; i < 5; i++);\n    x++;\nSystem.out.println(x);",
       expected: "1"
     },
     {
       chamber: 4,
       title: "Chamber IV — Nested Sigils",
       description: "Count how many times the inner body runs in this triangular nested loop.",
-      puzzle:
+      puzzle_code:
         "int k = 0;\nfor (int i = 1; i <= 3; i++) {\n    for (int j = 1; j <= i; j++) {\n        k++;\n    }\n}\nSystem.out.println(k);",
       expected: "6"
     },
     {
       chamber: 5,
       title: "Chamber V — False Twin",
-      description: "Debugging: string identity vs value. Predict the boolean printed by ==.",
-      puzzle:
-        'String a = "soul";\nString b = new String("soul");\nSystem.out.println(a == b);',
+      description: "String identity vs value. Predict the boolean printed by ==.",
+      puzzle_code: 'String a = "soul";\nString b = new String("soul");\nSystem.out.println(a == b);',
       expected: "false"
     }
   ];
@@ -61,11 +58,23 @@
   var trialStartedAt = 0;
   var locked = false;
   var ended = false;
+  var signedIn = false;
 
   var els = {};
 
   function $(id) {
     return document.getElementById(id);
+  }
+
+  function apiUrl(path) {
+    if (global.TrialAuth && typeof global.TrialAuth.apiUrl === "function") {
+      return global.TrialAuth.apiUrl(path);
+    }
+    return "http://localhost:8080/TheDevilsTrial" + path;
+  }
+
+  function isSignedIn() {
+    return !!(global.TrialAuth && global.TrialAuth.userId);
   }
 
   function clampHp(value) {
@@ -126,7 +135,6 @@
 
   function updateHUD(change) {
     change = change || {};
-
     heroHp = clampHp(heroHp);
     devilHp = clampHp(devilHp);
 
@@ -163,12 +171,18 @@
       pulseClass(els.stage, "is-shaking", 450);
       pulseClass(els.arenaHud, "is-shaking", 450);
       pulseClass(els.heroCard, "is-shaking", 450);
-      pulseClass(els.heroHpBar, "is-shaking", 450);
       pulseClass(document.body, "is-flashing", 420);
+      pulseClass(els.devilPortrait, "is-attacking", 500);
+      if (typeof global.playHurtSfx === "function") {
+        global.playHurtSfx();
+      }
     }
     if (change.shakeDevil) {
       pulseClass(els.devilCard, "is-shaking", 450);
-      pulseClass(els.devilHpBar, "is-shaking", 450);
+      pulseClass(els.heroPortrait, "is-attacking", 500);
+      if (typeof global.playHitSfx === "function") {
+        global.playHitSfx();
+      }
     }
   }
 
@@ -199,6 +213,9 @@
 
   function playSlashAttack() {
     document.body.classList.add("is-slashing");
+    if (typeof global.playSlashSfx === "function") {
+      global.playSlashSfx();
+    }
     if (els.slashFx) {
       els.slashFx.hidden = false;
       els.slashFx.classList.remove("is-active");
@@ -217,10 +234,9 @@
   function applyChamber(payload) {
     var chamber = payload || {};
     currentChamber = Number(chamber.chamber || chamber.level_id || currentChamber) || 1;
-    expectedOutput = String(chamber.expected || chamber.expected_output || "");
+    expectedOutput = String(chamber.expected || chamber.expected_output || chamber.correct_answer || "");
     if (els.puzzlePrompt) {
-      els.puzzlePrompt.textContent =
-        chamber.description || "Predict the output of the forbidden snippet.";
+      els.puzzlePrompt.textContent = chamber.description || "Type the exact output of the forbidden snippet.";
     }
     if (els.puzzleCode) {
       els.puzzleCode.textContent = chamber.puzzle || chamber.puzzle_code || "";
@@ -237,29 +253,68 @@
     return LOCAL_CHAMBERS[i];
   }
 
-  function fetchNextLevel() {
-    var url =
-      API_GAME +
-      "?action=nextLevel&chamber=" +
-      encodeURIComponent(String(currentChamber)) +
-      "&heroHp=" +
-      encodeURIComponent(String(heroHp)) +
-      "&devilHp=" +
-      encodeURIComponent(String(devilHp));
+  function applySession(session) {
+    if (!session) {
+      return;
+    }
+    if (typeof session.hero_hp === "number") {
+      heroHp = session.hero_hp;
+    }
+    if (typeof session.devil_hp === "number") {
+      devilHp = session.devil_hp;
+    }
+    if (typeof session.current_level === "number") {
+      currentChamber = session.current_level;
+    }
+  }
 
-    return fetch(url, { headers: { Accept: "application/json" } })
-      .then(function (response) {
-        if (!response.ok) {
-          throw new Error("nextLevel " + response.status);
-        }
-        return response.json();
-      })
+  function fetchQuestion(level) {
+    return fetch(apiUrl("/game/question?level=" + encodeURIComponent(String(level))), {
+      credentials: "include",
+      headers: { Accept: "application/json" }
+    }).then(function (response) {
+      if (!response.ok) {
+        throw new Error("question " + response.status);
+      }
+      return response.json();
+    });
+  }
+
+  function loadChamber() {
+    return fetchQuestion(currentChamber)
       .then(function (data) {
+        if (data.session) {
+          applySession(data.session);
+        }
         applyChamber(data);
+        expectedOutput = "";
       })
       .catch(function () {
         applyChamber(localChamber(currentChamber));
       });
+  }
+
+  function persistProgress(extra) {
+    if (!isSignedIn()) {
+      return;
+    }
+    extra = extra || {};
+    fetch(apiUrl("/game/progress"), {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        heroHp: heroHp,
+        devilHp: devilHp,
+        currentLevel: currentChamber,
+        totalTimeTaken: elapsedSeconds(),
+        status: extra.status || "PLAYING",
+        victory: !!extra.victory,
+        newTrial: !!extra.newTrial
+      })
+    }).catch(function () {
+      return null;
+    });
   }
 
   function setInputLocked(isLocked) {
@@ -304,6 +359,64 @@
     }
   }
 
+  function hideLeaderboard() {
+    if (!els.leaderboardModal) {
+      return;
+    }
+    if (typeof els.leaderboardModal.close === "function" && els.leaderboardModal.open) {
+      els.leaderboardModal.close();
+    }
+    els.leaderboardModal.hidden = true;
+  }
+
+  function renderLeaders(entries) {
+    if (!els.leaderboardList) {
+      return;
+    }
+    els.leaderboardList.innerHTML = "";
+    if (!entries || !entries.length) {
+      els.leaderboardList.innerHTML = "<li class=\"leader-empty\">No souls recorded yet.</li>";
+      return;
+    }
+    entries.forEach(function (entry) {
+      var item = document.createElement("li");
+      item.className = "leader-row";
+      item.innerHTML =
+        "<span class=\"leader-rank\">#" +
+        entry.rank +
+        "</span><span class=\"leader-name\"></span><span class=\"leader-score\"></span>";
+      item.querySelector(".leader-name").textContent = entry.name;
+      item.querySelector(".leader-score").textContent = String(entry.score);
+      els.leaderboardList.appendChild(item);
+    });
+  }
+
+  function openLeaderboard() {
+    if (!els.leaderboardModal) {
+      return;
+    }
+    els.leaderboardModal.hidden = false;
+    if (typeof els.leaderboardModal.showModal === "function" && !els.leaderboardModal.open) {
+      els.leaderboardModal.showModal();
+    }
+    fetch(apiUrl("/game/leaderboard"), {
+      credentials: "include",
+      headers: { Accept: "application/json" }
+    })
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error("leaderboard");
+        }
+        return response.json();
+      })
+      .then(function (data) {
+        renderLeaders(data.leaders || []);
+      })
+      .catch(function () {
+        renderLeaders([]);
+      });
+  }
+
   function rankForClear() {
     var elapsed = elapsedSeconds();
     if (heroHp >= 75 && elapsed <= 90) {
@@ -332,8 +445,9 @@
       els.statHeroHp.textContent = String(heroHp);
     }
     if (els.statRank) {
-      els.statRank.textContent = rankForClear();
+      els.statRank.textContent = rankForClear() + " · " + heroHp * 10 + " souls";
     }
+    persistProgress({ status: "WON", victory: true });
     showModal("victory");
   }
 
@@ -354,6 +468,7 @@
     if (els.statDevilHp) {
       els.statDevilHp.textContent = String(devilHp);
     }
+    persistProgress({ status: "FAILED" });
     callVoice("speakGameOver", "Your soul was consumed.");
     showModal("defeat");
   }
@@ -370,7 +485,7 @@
     return false;
   }
 
-  function onCorrect() {
+  function onCorrect(nextLevel) {
     devilHp -= DEVIL_HIT;
     updateHUD({ shakeDevil: true });
     playSlashAttack();
@@ -378,19 +493,25 @@
     if (resolveOutcome()) {
       return;
     }
-    currentChamber = Math.min(TOTAL_CHAMBERS, currentChamber + 1);
-    fetchNextLevel().then(function () {
-      if (!ended) {
-        setInputLocked(false);
-        startTimer();
-      }
-    });
+    if (nextLevel && nextLevel.level_id) {
+      applyChamber(nextLevel);
+      expectedOutput = "";
+    } else {
+      currentChamber = Math.min(TOTAL_CHAMBERS, currentChamber + 1);
+      loadChamber();
+    }
+    persistProgress();
+    if (!ended) {
+      setInputLocked(false);
+      startTimer();
+    }
   }
 
   function onIncorrect() {
     heroHp -= HERO_HIT;
     updateHUD({ shakeHero: true });
     callVoice("speakMockTaunt", "Pathetic.");
+    persistProgress();
     if (resolveOutcome()) {
       return;
     }
@@ -403,25 +524,86 @@
       return;
     }
     stopTimer();
+    if (isSignedIn()) {
+      checkAnswer("\u0000timeout").catch(function () {
+        setInputLocked(true);
+        onIncorrect();
+      });
+      return;
+    }
     setInputLocked(true);
     onIncorrect();
   }
 
+  function validateRemote(rawInput) {
+    return fetch(apiUrl("/game/validate"), {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        answer: rawInput,
+        totalTimeTaken: elapsedSeconds()
+      })
+    }).then(function (response) {
+      if (response.status === 401) {
+        throw new Error("unauthorized");
+      }
+      if (!response.ok) {
+        throw new Error("validate " + response.status);
+      }
+      return response.json();
+    });
+  }
+
   function checkAnswer(rawInput) {
     if (ended || locked) {
-      return;
+      return Promise.resolve();
     }
     var guess = normalizeAnswer(rawInput);
-    if (!guess) {
-      return;
+    if (!guess && !isSignedIn()) {
+      return Promise.resolve();
     }
     stopTimer();
     setInputLocked(true);
+
+    if (isSignedIn()) {
+      signedIn = true;
+      return validateRemote(rawInput).then(function (data) {
+        heroHp = typeof data.hero_hp === "number" ? data.hero_hp : heroHp;
+        devilHp = typeof data.devil_hp === "number" ? data.devil_hp : devilHp;
+        currentChamber = data.current_level || currentChamber;
+        updateHUD();
+        if (data.correct) {
+          updateHUD({ shakeDevil: true });
+          playSlashAttack();
+          callVoice("speakRageTaunt", "You strike true.");
+        } else {
+          updateHUD({ shakeHero: true });
+          callVoice("speakMockTaunt", "Pathetic.");
+        }
+        if (data.status === "WON" || devilHp <= 0) {
+          showVictory();
+          return;
+        }
+        if (data.status === "FAILED" || heroHp <= 0) {
+          showDefeat();
+          return;
+        }
+        if (data.correct && data.next_level) {
+          applyChamber(data.next_level);
+          expectedOutput = "";
+        }
+        setInputLocked(false);
+        startTimer();
+      });
+    }
+
     if (guess === normalizeAnswer(expectedOutput)) {
       onCorrect();
     } else {
       onIncorrect();
     }
+    return Promise.resolve();
   }
 
   function handleSubmit(event) {
@@ -431,6 +613,7 @@
 
   function initGame() {
     hideModal();
+    hideLeaderboard();
     ended = false;
     setInputLocked(false);
     heroHp = 100;
@@ -438,8 +621,12 @@
     currentChamber = 1;
     timeLeft = TIMER_SECONDS;
     trialStartedAt = Date.now();
+    signedIn = isSignedIn();
     updateHUD();
-    fetchNextLevel().then(function () {
+    if (signedIn) {
+      persistProgress({ newTrial: true, status: "PLAYING" });
+    }
+    loadChamber().then(function () {
       startTimer();
       callVoice("speakTrialStart", "The trial begins.");
     });
@@ -450,6 +637,8 @@
     els.arenaHud = document.querySelector(".arena-hud");
     els.heroCard = $("hero-card");
     els.devilCard = $("devil-card");
+    els.heroPortrait = document.querySelector(".hero-portrait");
+    els.devilPortrait = document.querySelector(".devil-portrait");
     els.heroHpBar = $("hero-hp-bar");
     els.devilHpBar = $("devil-hp-bar");
     els.heroHpText = $("hero-hp-text");
@@ -475,6 +664,10 @@
     els.statDevilHp = $("stat-devil-hp");
     els.victoryRetry = $("victory-retry-btn");
     els.defeatRetry = $("defeat-retry-btn");
+    els.leaderboardBtn = $("leaderboard-btn");
+    els.leaderboardModal = $("leaderboard-modal");
+    els.leaderboardList = $("leaderboard-list");
+    els.leaderboardClose = $("leaderboard-close-btn");
   }
 
   function bindEvents() {
@@ -486,6 +679,12 @@
     }
     if (els.defeatRetry) {
       els.defeatRetry.addEventListener("click", initGame);
+    }
+    if (els.leaderboardBtn) {
+      els.leaderboardBtn.addEventListener("click", openLeaderboard);
+    }
+    if (els.leaderboardClose) {
+      els.leaderboardClose.addEventListener("click", hideLeaderboard);
     }
   }
 

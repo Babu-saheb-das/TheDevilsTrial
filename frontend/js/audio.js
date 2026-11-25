@@ -148,11 +148,61 @@
     speakDevil(pickLine(GAME_OVER_MOCKS));
   }
 
+  var audioCtx = null;
+
+  function audioContext() {
+    var Ctx = global.AudioContext || global.webkitAudioContext;
+    if (!Ctx) {
+      return null;
+    }
+    if (!audioCtx) {
+      audioCtx = new Ctx();
+    }
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
+    return audioCtx;
+  }
+
+  function playTone(frequency, duration, type, gainValue) {
+    var ctx = audioContext();
+    if (!ctx) {
+      return;
+    }
+    var oscillator = ctx.createOscillator();
+    var gain = ctx.createGain();
+    oscillator.type = type || "sawtooth";
+    oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
+    gain.gain.setValueAtTime(gainValue || 0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start();
+    oscillator.stop(ctx.currentTime + duration);
+  }
+
+  function playSlashSfx() {
+    playTone(720, 0.12, "sawtooth", 0.07);
+    playTone(180, 0.18, "square", 0.05);
+  }
+
+  function playHitSfx() {
+    playTone(140, 0.22, "triangle", 0.09);
+  }
+
+  function playHurtSfx() {
+    playTone(90, 0.28, "sawtooth", 0.1);
+    playTone(60, 0.32, "square", 0.06);
+  }
+
   global.speakDevil = speakDevil;
   global.speakTrialStart = speakTrialStart;
   global.speakRageTaunt = speakRageTaunt;
   global.speakMockTaunt = speakMockTaunt;
   global.speakGameOver = speakGameOver;
+  global.playSlashSfx = playSlashSfx;
+  global.playHitSfx = playHitSfx;
+  global.playHurtSfx = playHurtSfx;
 
   if (global.speechSynthesis) {
     refreshVoices();

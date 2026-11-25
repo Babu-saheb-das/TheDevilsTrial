@@ -1,5 +1,4 @@
--- The Devil's Trial — MySQL schema
--- Database name matches DBConnection.DB_NAME
+-- The Devil's Trial — MySQL schema (matches DBConnection.DB_NAME)
 
 CREATE DATABASE IF NOT EXISTS devils_trial
     CHARACTER SET utf8mb4
@@ -8,6 +7,7 @@ CREATE DATABASE IF NOT EXISTS devils_trial
 USE devils_trial;
 
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS leaderboard;
 DROP TABLE IF EXISTS game_sessions;
 DROP TABLE IF EXISTS levels;
 DROP TABLE IF EXISTS users;
@@ -28,7 +28,7 @@ CREATE TABLE levels (
     title             VARCHAR(120) NOT NULL,
     description       VARCHAR(500) NOT NULL,
     puzzle_code       TEXT NOT NULL,
-    expected_output   VARCHAR(255) NOT NULL
+    correct_answer    VARCHAR(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE game_sessions (
@@ -54,11 +54,24 @@ CREATE TABLE game_sessions (
     INDEX idx_sessions_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO levels (level_id, title, description, puzzle_code, expected_output) VALUES
+CREATE TABLE leaderboard (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT UNSIGNED NOT NULL,
+    score       INT NOT NULL COMMENT 'hero_hp * 10 at victory',
+    hero_hp     INT NOT NULL,
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_leaderboard_user
+        FOREIGN KEY (user_id) REFERENCES users (id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    INDEX idx_leaderboard_score (score DESC, created_at ASC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO levels (level_id, title, description, puzzle_code, correct_answer) VALUES
 (
     1,
     'Chamber I — Summoning Loop',
-    'Predict the printed integer. A simple accumulating for-loop.',
+    'Predict the printed integer. Type only the output.',
     'int n = 0;\nfor (int i = 1; i <= 4; i++) {\n    n += i;\n}\nSystem.out.println(n);',
     '10'
 ),
@@ -86,7 +99,7 @@ INSERT INTO levels (level_id, title, description, puzzle_code, expected_output) 
 (
     5,
     'Chamber V — False Twin',
-    'Debugging: string identity vs value. Predict the boolean printed by ==.',
+    'String identity vs value. Predict the boolean printed by ==.',
     'String a = "soul";\nString b = new String("soul");\nSystem.out.println(a == b);',
     'false'
 );
